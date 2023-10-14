@@ -59,10 +59,6 @@ app.put("/signup", async (req,res)=>{
         countError++
         error=error+"indirizzo della attività, "
     }
-    if(info.dimmiDiPiu===""){
-        countError++
-        error=error+"dimmi di più, "
-    }
     if(info.img===""){
         countError++
         error=error+"immagine, "
@@ -136,4 +132,43 @@ app.get("/users",async(req, res)=>{
     client.db("face").collection("users").find().forEach(e=>{
         array.push(e)
     }).then(()=>res.send(array))
+})
+app.get("/user/:userId",async(req, res)=>{
+    client.db("face").collection("users").findOne({_id:new ObjectId(req.params.userId)}).then(e=>{
+        if(!e){
+            res.status(203).send("Errore: User non trovato!")
+        }else{
+            res.send(e)
+        }
+    })
+})
+app.put("/modificaInfo",async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    let countError=0
+    let error="non hai compilato il campo: "
+    if(info.nomeCognome===""){
+        countError++
+        error=error+"nome e cognome, "
+    }
+    if(info.anni===""){
+        countError++
+        error=error+"anni, "
+    }
+    if(countError>0){
+        res.status(203).send(error)
+    }else{
+        client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
+            if(!e){
+                res.status(203).send("Utente non trovato!")
+            }else{
+                client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{nomeCognome:info.nomeCognome,anni:info.anni,dimmiDiPiu:info.dimmiDiPiu,social:{facebook:info.facebook,instagram:info.instagram,twitter:info.twitter}}}).then(i=>{
+                    if(!i){
+                        res.status(203).send("Qualcosa è andato storto! Riprova")
+                    }else{
+                        res.send("ok")
+                    }
+                })
+            }
+        })
+    }
 })
