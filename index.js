@@ -80,7 +80,6 @@ app.put("/signup", async (req,res)=>{
             }
         })
     }
-    
 })
 //login attivita
 app.put("/login", async (req,res)=>{
@@ -121,7 +120,7 @@ app.put('/stayLogin', async(req, res)=>{
 });
 //salva immagine
 app.post('/upload', upload.single('file'),async(req, res)=>{
-    res.json(req.file);
+    res.send(req.file);
 });
 //mostra immagine
 app.get('/uploads/:filename',async(req, res)=>{
