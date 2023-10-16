@@ -113,15 +113,20 @@ app.put("/login", async (req,res)=>{
 //rimani loggato
 app.put('/stayLogin', async(req, res)=>{
     let info=JSON.parse(Object.keys(req.body)[0]);
-    client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
-        if(e){
-            res.send(e._id)
-        }else{
-            res.status(203).send("Utente non esistente, Registrati!")
-        }
-    })
+    try{
+        client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
+            if(e){
+                res.send(e._id)
+            }else{
+                res.status(203).send("Utente non esistente, Registrati!")
+            }
+        })
+    }catch{
+        res.status(203).send("Qualche problema")
+    }
+    
 });
-//salva immagine
+//salva immagine profilo nella registrazione
 app.post('/upload',async(req, res)=>{
     const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
     if(!fs.existsSync("./uploads/"+filename)){
@@ -131,7 +136,28 @@ app.post('/upload',async(req, res)=>{
         res.status(203).send("Hai già aggiunto queste immagini")
     }
 });
-//mostra immagine
+//modifica immagine profilo
+app.post('/modifyUpload',async(req, res)=>{
+    const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
+    client.db("face").collection("users").findOne({_id:new ObjectId(req.body.id)}).then(e=>{
+        if(e){
+            if(fs.existsSync("./uploads/"+e.img.split("/uploads/")[1])){
+                fs.unlinkSync("./uploads/"+e.img.split("/uploads/")[1])
+            }
+            fs.writeFileSync("./uploads/"+filename, req.files.file.data)
+            client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$set:{img:"https://facedetection-server.onrender.com/uploads/"+filename}}).then(i=>{
+                if(!i){
+                    res.status(203).send("Qualcosa è andato storto. Riprova!")
+                }else{
+                    res.send("ok")
+                }
+            })
+        }else{
+            res.status(203).send("Utente non esistente")
+        }
+    })
+});
+//mostra immagini
 app.get('/uploads/:filename',async(req, res)=>{
     res.sendFile("/uploads/"+req.params.filename,{ root: __dirname })
 })
