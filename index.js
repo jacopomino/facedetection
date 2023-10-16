@@ -5,10 +5,13 @@ import {MongoClient,ObjectId} from "mongodb"
 import multer from "multer"
 import { fileURLToPath } from "url"
 import path from "path"
+import fs from "fs"
+import fileupload from "express-fileupload"
 
 const PORT = process.env.PORT|| 3001;
 const app=express()
 app.use(cors())
+app.use(fileupload());
 app.use(bodyParser.urlencoded({extended:true}))
 //per salvare le immagini in uploads
 const __filename = fileURLToPath(import.meta.url);
@@ -119,8 +122,14 @@ app.put('/stayLogin', async(req, res)=>{
     })
 });
 //salva immagine
-app.post('/upload', upload.single('file'),async(req, res)=>{
-    res.send(req.file);
+app.post('/upload',async(req, res)=>{
+    const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
+    if(!fs.existsSync("./uploads/"+filename)){
+        fs.writeFileSync("./uploads/"+filename, req.files.file.data)
+        res.status(200).send(filename)
+    }else{
+        res.status(203).send("Hai già aggiunto queste immagini")
+    }
 });
 //mostra immagine
 app.get('/uploads/:filename',async(req, res)=>{
@@ -161,6 +170,32 @@ app.put("/modificaInfo",async(req, res)=>{
                 res.status(203).send("Utente non trovato!")
             }else{
                 client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{nomeCognome:info.nomeCognome,anni:info.anni,dimmiDiPiu:info.dimmiDiPiu,social:{facebook:info.facebook,instagram:info.instagram,twitter:info.twitter}}}).then(i=>{
+                    if(!i){
+                        res.status(203).send("Qualcosa è andato storto! Riprova")
+                    }else{
+                        res.send("ok")
+                    }
+                })
+            }
+        })
+    }
+})
+app.put("/modificaProfessione",async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    let countError=0
+    let error="non hai compilato il campo: "
+    if(info.professione==="0"){
+        countError++
+        error=error+"professione, "
+    }
+    if(countError>0){
+        res.status(203).send(error)
+    }else{
+        client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
+            if(!e){
+                res.status(203).send("Utente non trovato!")
+            }else{
+                client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{professione:info.professione,infoProfessione:{linkProfessione:info.linkProfessione,descrizioneProfessione:info.descrizioneProfessione}}}).then(i=>{
                     if(!i){
                         res.status(203).send("Qualcosa è andato storto! Riprova")
                     }else{
