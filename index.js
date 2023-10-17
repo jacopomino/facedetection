@@ -5,8 +5,9 @@ import {MongoClient,ObjectId} from "mongodb"
 import multer from "multer"
 import { fileURLToPath } from "url"
 import path from "path"
-import fs from "fs"
 import fileupload from "express-fileupload"
+import { uploadFile } from "@uploadcare/upload-client"
+import {deleteFile,UploadcareSimpleAuthSchema,} from '@uploadcare/rest-client';
 
 const PORT = process.env.PORT|| 3001;
 const app=express()
@@ -124,43 +125,77 @@ app.put('/stayLogin', async(req, res)=>{
     }catch{
         res.status(203).send("Qualche problema")
     }
-    
 });
 //salva immagine profilo nella registrazione
 app.post('/upload',async(req, res)=>{
     const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
-    if(!fs.existsSync("./uploads/"+filename)){
-        fs.writeFileSync("./uploads/"+filename, req.files.file.data)
-        res.status(200).send(filename)
-    }else{
-        res.status(203).send("Hai già aggiunto queste immagini")
-    }
+    const result = await uploadFile(req.files.file.data, {
+        publicKey: '8cff886cb01a8f787891',
+        store: 1,
+        fileName:filename
+    }).then(e=>{
+        if(e){
+            res.send("https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename);
+        }else{
+            res.status(203).send("Non è andato bene qualcosa, riprova!")
+        }
+    })
 });
 //modifica immagine profilo
 app.post('/modifyUpload',async(req, res)=>{
     const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
     client.db("face").collection("users").findOne({_id:new ObjectId(req.body.id)}).then(e=>{
         if(e){
-            if(fs.existsSync("./uploads/"+e.img.split("/uploads/")[1])){
-                fs.unlinkSync("./uploads/"+e.img.split("/uploads/")[1])
-            }
-            fs.writeFileSync("./uploads/"+filename, req.files.file.data)
-            client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$set:{img:"https://facedetection-server.onrender.com/uploads/"+filename}}).then(i=>{
-                if(!i){
-                    res.status(203).send("Qualcosa è andato storto. Riprova!")
-                }else{
-                    res.send("ok")
-                }
+            const uploadcareSimpleAuthSchema = new UploadcareSimpleAuthSchema({
+                publicKey: '8cff886cb01a8f787891',
+                secretKey: 'efa83be87027caaa9a56',
+              });
+            const result = deleteFile({uuid: e.img.split("/")[3]}, {authSchema:uploadcareSimpleAuthSchema}).then(()=>{
+                const result1 = uploadFile(req.files.file.data, {
+                    publicKey: '8cff886cb01a8f787891',
+                    store: 1,
+                    fileName:filename
+                }).then(i=>{
+                    if(i){
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$set:{img:"https://ucarecdn.com/"+i.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}}).then((s)=>{
+                            if(!s){
+                                res.status(203).send("Non è andato bene qualcosa, riprova!")
+                            }else{
+                                res.send("ok")
+                            }
+                        })
+                    }else{
+                        res.status(203).send("Non è andato bene qualcosa, riprova!")
+                    }
+                })
             })
         }else{
             res.status(203).send("Utente non esistente")
         }
     })
 });
-//mostra immagini
-app.get('/uploads/:filename',async(req, res)=>{
-    res.sendFile("/uploads/"+req.params.filename,{ root: __dirname })
-})
+//metti post
+app.post('/addPost', async(req, res)=>{
+    const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
+    const result = await uploadFile(req.files.file.data, {
+        publicKey: '8cff886cb01a8f787891',
+        store: 1,
+        fileName:filename
+    }).then(e=>{
+        if(e){
+            client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$pull:{post:{id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}}}).then((s)=>{
+                if(!s){
+                    res.status(203).send("Non è andato bene qualcosa, riprova!")
+                }else{
+                    res.send("ok")
+                }
+            })
+        }else{
+            res.status(203).send("Non è andato bene qualcosa, riprova!")
+        }
+    })
+});
+//prendi tutti gli users per la face detection
 app.get("/users",async(req, res)=>{
     let array=[]
     client.db("face").collection("users").find().forEach(e=>{
