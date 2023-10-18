@@ -183,13 +183,30 @@ app.post('/addPost', async(req, res)=>{
         fileName:filename
     }).then(e=>{
         if(e){
-            client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$pull:{post:{id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}}}).then((s)=>{
-                if(!s){
-                    res.status(203).send("Non è andato bene qualcosa, riprova!")
+            client.db("face").collection("users").findOne({_id:new ObjectId(req.body.id)}).then(i=>{
+                if(!i){
+                    res.status(203).send("Utente non trovato, riprova!")
                 }else{
-                    res.send("ok")
+                    if(i.post){
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$pull:{post:{id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}}}).then((s)=>{
+                            if(!s){
+                                res.status(203).send("Non è andato bene qualcosa, riprova!")
+                            }else{
+                                res.send("ok")
+                            }
+                        })
+                    }else{
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$set:{post:[{id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}]}}).then((s)=>{
+                            if(!s){
+                                res.status(203).send("Non è andato bene qualcosa, riprova!")
+                            }else{
+                                res.send("ok")
+                            }
+                        })
+                    }
                 }
             })
+            
         }else{
             res.status(203).send("Non è andato bene qualcosa, riprova!")
         }
