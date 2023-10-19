@@ -187,8 +187,11 @@ app.post('/addPost', async(req, res)=>{
                 if(!i){
                     res.status(203).send("Utente non trovato, riprova!")
                 }else{
-                    if(i.post){
-                        client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$pull:{post:{id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}}}).then((s)=>{
+                    if(i.post.length>0){
+                        let post=i.post
+                        let obj={id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}
+                        post.push(obj)
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(req.body.id)},{$set:{post:post}}).then((s)=>{
                             if(!s){
                                 res.status(203).send("Non è andato bene qualcosa, riprova!")
                             }else{
@@ -243,17 +246,11 @@ app.put("/modificaInfo",async(req, res)=>{
     if(countError>0){
         res.status(203).send(error)
     }else{
-        client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
-            if(!e){
-                res.status(203).send("Utente non trovato!")
+        client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{nomeCognome:info.nomeCognome,anni:info.anni,dimmiDiPiu:info.dimmiDiPiu,social:{facebook:info.facebook,instagram:info.instagram,twitter:info.twitter}}}).then(i=>{
+            if(!i){
+                res.status(203).send("Qualcosa è andato storto! Riprova")
             }else{
-                client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{nomeCognome:info.nomeCognome,anni:info.anni,dimmiDiPiu:info.dimmiDiPiu,social:{facebook:info.facebook,instagram:info.instagram,twitter:info.twitter}}}).then(i=>{
-                    if(!i){
-                        res.status(203).send("Qualcosa è andato storto! Riprova")
-                    }else{
-                        res.send("ok")
-                    }
-                })
+                res.send("ok")
             }
         })
     }
@@ -269,17 +266,35 @@ app.put("/modificaProfessione",async(req, res)=>{
     if(countError>0){
         res.status(203).send(error)
     }else{
-        client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
-            if(!e){
-                res.status(203).send("Utente non trovato!")
+        client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{professione:info.professione,infoProfessione:{linkProfessione:info.linkProfessione,descrizioneProfessione:info.descrizioneProfessione}}}).then(i=>{
+            if(!i){
+                res.status(203).send("Qualcosa è andato storto! Riprova")
             }else{
-                client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{professione:info.professione,infoProfessione:{linkProfessione:info.linkProfessione,descrizioneProfessione:info.descrizioneProfessione}}}).then(i=>{
-                    if(!i){
-                        res.status(203).send("Qualcosa è andato storto! Riprova")
-                    }else{
-                        res.send("ok")
-                    }
-                })
+                res.send("ok")
+            }
+        })
+    }
+})
+app.put("/modificaAccesso",async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    let countError=0
+    let error="non hai compilato il campo: "
+    if(info.email===""){
+        countError++
+        error=error+"professione, "
+    }
+    if(info.password===""){
+        countError++
+        error=error+"professione, "
+    }
+    if(countError>0){
+        res.status(203).send(error)
+    }else{
+        client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{email:info.email,password:info.password}}).then(i=>{
+            if(!i){
+                res.status(203).send("Qualcosa è andato storto! Riprova")
+            }else{
+                res.send("ok")
             }
         })
     }
