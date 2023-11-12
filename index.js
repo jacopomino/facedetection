@@ -7,7 +7,7 @@ import { fileURLToPath } from "url"
 import path from "path"
 import fileupload from "express-fileupload"
 import { uploadFile } from "@uploadcare/upload-client"
-import {deleteFile,UploadcareSimpleAuthSchema,} from '@uploadcare/rest-client';
+import {deleteFile,UploadcareSimpleAuthSchema} from '@uploadcare/rest-client';
 
 const PORT = process.env.PORT|| 3001;
 const app=express()
@@ -149,7 +149,7 @@ app.post('/modifyUpload',async(req, res)=>{
             const uploadcareSimpleAuthSchema = new UploadcareSimpleAuthSchema({
                 publicKey: '8cff886cb01a8f787891',
                 secretKey: 'efa83be87027caaa9a56',
-              });
+            });
             const result = deleteFile({uuid: e.img.split("/")[3]}, {authSchema:uploadcareSimpleAuthSchema}).then(()=>{
                 const result1 = uploadFile(req.files.file.data, {
                     publicKey: '8cff886cb01a8f787891',
@@ -187,7 +187,7 @@ app.post('/addPost', async(req, res)=>{
                 if(!i){
                     res.status(203).send("Utente non trovato, riprova!")
                 }else{
-                    if(i.post.length>0){
+                    if(i.post&&i.post.length>0){
                         let post=i.post
                         let obj={id:new ObjectId(),img:"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename}
                         post.push(obj)
@@ -215,6 +215,23 @@ app.post('/addPost', async(req, res)=>{
         }
     })
 });
+//cancella post
+app.post('/delatePost', async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    const uploadcareSimpleAuthSchema = new UploadcareSimpleAuthSchema({
+        publicKey: '8cff886cb01a8f787891',
+        secretKey: 'efa83be87027caaa9a56',
+    });
+    const result = deleteFile({uuid: info.img.split("/")[3]}, {authSchema:uploadcareSimpleAuthSchema}).then(()=>{
+        client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$pull:{post:{id:new ObjectId(info.idImmagine)}}}).then(i=>{
+            if(!i){
+                res.status(203).send("Qualcosa è andato storto! Riprova")
+            }else{
+                res.send("ok")
+            }
+        })
+    })
+})
 //prendi tutti gli users per la face detection
 app.get("/users",async(req, res)=>{
     let array=[]
