@@ -316,3 +316,50 @@ app.put("/modificaAccesso",async(req, res)=>{
         })
     }
 })
+//statistiche
+app.put("/statisticaClick",async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
+        if(!e){
+            res.status(203).send("Errore: User non trovato!")
+        }else{
+            let statistica={}
+            let click=1
+            if(e.statistica){
+                statistica=e.statistica
+                click=e.statistica.click+1
+            }
+            statistica["click"]=click
+            client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{statistica:statistica}}).then(i=>{
+                if(!i){
+                    res.status(203).send("Qualcosa è andato storto! Riprova")
+                }else{
+                    res.send("ok")
+                }
+            })
+        }
+    })
+})
+app.put("/statisticaUserTrovato",async(req, res)=>{
+    let info=JSON.parse(Object.keys(req.body)[0]);
+    client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
+        if(!e){
+            res.status(203).send("Errore: User non trovato!")
+        }else{
+            let statistica=e.statistica
+            let user=[]
+            if(e.statistica.userTrovato){
+                user=e.statistica.userTrovato
+            }
+            user.push({user:info.userTrovato,data:info.data})
+            statistica["userTrovato"]=user
+            client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{statistica:statistica}}).then(i=>{
+                if(!i){
+                    res.status(203).send("Qualcosa è andato storto! Riprova")
+                }else{
+                    res.send("ok")
+                }
+            })
+        }
+    })
+})
