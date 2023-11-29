@@ -361,5 +361,26 @@ app.put("/statisticaUserTrovato",async(req, res)=>{
                 }
             })
         }
+    }).finally(()=>{
+        client.db("face").collection("users").findOne({_id:new ObjectId(info.userTrovato)}).then(e=>{
+            if(!e){
+                res.status(203).send("Errore: User non trovato!")
+            }else{
+                let statistica=e.statistica
+                let user=[]
+                if(e.statistica.userTrovante){
+                    user=e.statistica.userTrovante
+                }
+                user.push({user:info.id,data:info.data})
+                statistica["userTrovante"]=user
+                client.db("face").collection("users").updateOne({_id:new ObjectId(info.userTrovato)},{$set:{statistica:statistica}}).then(i=>{
+                    if(!i){
+                        res.status(203).send("Qualcosa è andato storto! Riprova")
+                    }else{
+                        res.send("ok")
+                    }
+                })
+            }
+        })
     })
 })
