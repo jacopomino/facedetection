@@ -356,8 +356,6 @@ app.put("/statisticaUserTrovato",async(req, res)=>{
             client.db("face").collection("users").updateOne({_id:new ObjectId(info.id)},{$set:{statistica:statistica}}).then(i=>{
                 if(!i){
                     res.status(203).send("Qualcosa è andato storto! Riprova")
-                }else{
-                    res.send("ok")
                 }
             })
         }
