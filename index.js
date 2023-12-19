@@ -386,9 +386,9 @@ app.post("/immagine",async(req,res)=>{
     const filename=req.files.file.name+Date.now()+"."+req.files.file.mimetype.split("/")[1]
     const result = await uploadFile(req.files.file.data, {
         publicKey: '8cff886cb01a8f787891',
-        store: 1,
+        store: 0,
         fileName:filename
-    }).then(e=>{
+    },UPLoadCa).then(e=>{
         if(e){
             res.send("https://lens.google.com/uploadbyurl?url="+"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename)
         }else{
