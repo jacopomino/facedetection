@@ -388,7 +388,7 @@ app.post("/immagine",async(req,res)=>{
         publicKey: '8cff886cb01a8f787891',
         store: 0,
         fileName:filename
-    },UPLoadCa).then(e=>{
+    }).then(e=>{
         if(e){
             res.send("https://lens.google.com/uploadbyurl?url="+"https://ucarecdn.com/"+e.uuid+"/-/resize/1200x/-/quality/smart/-/format/auto/"+filename)
         }else{
