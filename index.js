@@ -8,12 +8,17 @@ import path from "path"
 import fileupload from "express-fileupload"
 import { uploadFile } from "@uploadcare/upload-client"
 import {deleteFile,UploadcareSimpleAuthSchema} from '@uploadcare/rest-client';
+import admin from "firebase-admin"
+import serviceAccount from "./firebaseConfig.json" assert {type:"json"}
 
 const PORT = process.env.PORT|| 3001;
 const app=express()
 app.use(cors())
 app.use(fileupload());
 app.use(bodyParser.urlencoded({extended:true}))
+admin.initializeApp({
+    credential:admin.credential.cert(serviceAccount)
+})
 //per salvare le immagini in uploads
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,14 +38,15 @@ const fileFilter = (req, file, cb) => {
     }
 }
 const upload = multer({ storage: storage, fileFilter: fileFilter });
+
 //fammi vedere che è attivo
-app.listen(PORT,()=>{
-    console.log("run");
-})
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 const client=new MongoClient("mongodb://apo:jac2001min@cluster0-shard-00-00.pdunp.mongodb.net:27017,cluster0-shard-00-01.pdunp.mongodb.net:27017,cluster0-shard-00-02.pdunp.mongodb.net:27017/?ssl=true&replicaSet=atlas-me2tz8-shard-0&authSource=admin&retryWrites=true&w=majority")
 //signup attivita
 app.put("/signup", async (req,res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     let countError=0
     let error="non hai compilato il campo: "
     if(info.nomeCognome===""){
@@ -70,6 +76,7 @@ app.put("/signup", async (req,res)=>{
     if(countError>0){
         res.status(203).send(error)
     }else{
+        info.token=[info.token]
         client.db("face").collection("users").findOne({email:info.email}).then(e=>{
             if(!e){
                 client.db("face").collection("users").insertOne(info).then(i=>{
@@ -87,7 +94,7 @@ app.put("/signup", async (req,res)=>{
 })
 //login attivita
 app.put("/login", async (req,res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     let countError=0
     let error="non hai compilato il campo: "
     if(info.password===""){
@@ -103,6 +110,9 @@ app.put("/login", async (req,res)=>{
     }else{
         client.db("face").collection("users").findOne({password:info.password,email:info.email}).then(e=>{
             if(e){
+                if(!e.token.find(i=>info.token===i)){
+                    client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$push:{token:info.token}})
+                }
                 res.send(e._id)
             }else{
                 res.status(203).send("Utente non esistente, Registrati!")
@@ -113,7 +123,7 @@ app.put("/login", async (req,res)=>{
 })
 //rimani loggato
 app.put('/stayLogin', async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     try{
         client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
             if(e){
@@ -217,7 +227,7 @@ app.post('/addPost', async(req, res)=>{
 });
 //cancella post
 app.post('/delatePost', async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     const uploadcareSimpleAuthSchema = new UploadcareSimpleAuthSchema({
         publicKey: '8cff886cb01a8f787891',
         secretKey: 'efa83be87027caaa9a56',
@@ -249,7 +259,7 @@ app.get("/user/:userId",async(req, res)=>{
     })
 })
 app.put("/modificaInfo",async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     let countError=0
     let error="non hai compilato il campo: "
     if(info.nomeCognome===""){
@@ -273,7 +283,7 @@ app.put("/modificaInfo",async(req, res)=>{
     }
 })
 app.put("/modificaProfessione",async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     let countError=0
     let error="non hai compilato il campo: "
     if(info.professione==="0"){
@@ -293,7 +303,7 @@ app.put("/modificaProfessione",async(req, res)=>{
     }
 })
 app.put("/modificaAccesso",async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     let countError=0
     let error="non hai compilato il campo: "
     if(info.email===""){
@@ -318,7 +328,7 @@ app.put("/modificaAccesso",async(req, res)=>{
 })
 //statistiche
 app.put("/statisticaClick",async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
         if(!e){
             res.status(203).send("Errore: User non trovato!")
@@ -341,7 +351,7 @@ app.put("/statisticaClick",async(req, res)=>{
     })
 })
 app.put("/statisticaUserTrovato",async(req, res)=>{
-    let info=JSON.parse(Object.keys(req.body)[0]);
+    let info=req.body
     client.db("face").collection("users").findOne({_id:new ObjectId(info.id)}).then(e=>{
         if(!e){
             res.status(203).send("Errore: User non trovato!")
@@ -395,4 +405,94 @@ app.post("/immagine",async(req,res)=>{
             res.status(203).send("Qualcosa è andato storto! Riprova")
         }
     })
+})
+app.put("/msg",async(req,res)=>{
+    let info=req.body;
+    if(info.text!==""){
+        await client.db("face").collection("users").findOne({_id:new ObjectId(info.meId)}).then(me=>{
+            if(me){
+                if(me.messaggi){
+                    if(me.messaggi[info.luiId]){
+                        me.messaggi[info.luiId].push({text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra})
+                        const messaggio=me.messaggi
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(info.meId)},{$set:{messaggi:messaggio}}).then(i=>{
+                            if(!i){
+                                res.status(203).send("Qualcosa è andato storto! Riprova")
+                            }
+                        })
+                    }else{
+                        me.messaggi[info.luiId]=[{text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra}]
+                        const messaggio=me.messaggi
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(info.meId)},{$set:{messaggi:messaggio}}).then(i=>{
+                            if(!i){
+                                res.status(203).send("Qualcosa è andato storto! Riprova")
+                            }
+                        })
+                    }
+                }else{
+                    const messaggio={[info.luiId]:[{text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra}]}
+                    client.db("face").collection("users").updateOne({_id:new ObjectId(info.meId)},{$set:{messaggi:messaggio}}).then(i=>{
+                        if(!i){
+                            res.status(203).send("Qualcosa è andato storto! Riprova")
+                        }
+                    })
+                }
+            }else{
+                res.status(203).send("Qualcosa è andato storto! Riprova")
+            }
+        })
+        if(info.meId!==info.luiId){
+            await client.db("face").collection("users").findOne({_id:new ObjectId(info.luiId)}).then(lui=>{
+                if(lui){
+                    if(lui.messaggi){
+                        if(lui.messaggi[info.meId]){
+                            lui.messaggi[info.meId].push({text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra})
+                            const messaggio=lui.messaggi
+                            client.db("face").collection("users").updateOne({_id:new ObjectId(info.luiId)},{$set:{messaggi:messaggio}}).then(i=>{
+                                if(!i){
+                                    res.status(203).send("Qualcosa è andato storto! Riprova")
+                                }
+                            })
+                        }else{
+                            lui.messaggi[info.meId]=[{text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra}]
+                            const messaggio=lui.messaggi
+                            client.db("face").collection("users").updateOne({_id:new ObjectId(info.luiId)},{$set:{messaggi:messaggio}}).then(i=>{
+                                if(!i){
+                                    res.status(203).send("Qualcosa è andato storto! Riprova")
+                                }
+                            })
+                        }
+                    }else{
+                        const messaggio={[info.meId]:[{text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra}]}
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(info.luiId)},{$set:{messaggi:messaggio}}).then(i=>{
+                            if(!i){
+                                res.status(203).send("Qualcosa è andato storto! Riprova")
+                            }
+                        })
+                    }
+                }else{
+                    res.status(203).send("Qualcosa è andato storto! Riprova")
+                }
+            })
+        }
+        const payload = {
+            tokens:info["token[]"],
+            notification: {
+                title:info.meId,
+                body:info.text,
+            },
+        };
+        admin.messaging().sendEachForMulticast(payload).then(e=>{
+            if(e){
+                res.send("ok")
+            }else{
+                res.send("Qualcosa è andato storto! Riprova")
+            }
+        }).catch((error) => {
+            console.error('Errore nell\'invio del messaggio push:', error);
+        });
+    }else{
+        res.status(203).send("Non hai scritto niente. Scrivi il messaggio!")
+    }
+    
 })
