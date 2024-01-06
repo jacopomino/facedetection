@@ -480,6 +480,7 @@ app.put("/msg",async(req,res)=>{
             notification: {
                 title:info.meId,
                 body:info.text,
+                imageUrl:info.icon
             },
         };
         admin.messaging().sendEachForMulticast(payload).then(e=>{
