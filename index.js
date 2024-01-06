@@ -408,9 +408,11 @@ app.post("/immagine",async(req,res)=>{
 })
 app.put("/msg",async(req,res)=>{
     let info=req.body;
+    let mittente=""
     if(info.text!==""){
         await client.db("face").collection("users").findOne({_id:new ObjectId(info.meId)}).then(me=>{
             if(me){
+                mittente=me.nomeCognome
                 if(me.messaggi){
                     if(me.messaggi[info.luiId]){
                         me.messaggi[info.luiId].push({text:info.text,mittente:new ObjectId(info.meId),dataOra:info.dataOra})
@@ -478,7 +480,7 @@ app.put("/msg",async(req,res)=>{
         const payload = {
             tokens:info["token[]"],
             notification: {
-                title:info.meId,
+                title:mittente,
                 body:info.text,
                 imageUrl:info.icon
             },
