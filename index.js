@@ -485,23 +485,26 @@ app.put("/msg",async(req,res)=>{
                 }
             })
         }
-        const payload = {
-            tokens:info["token[]"],
-            notification: {
-                title:mittente,
-                body:info.text,
-                imageUrl:info.icon
-            },
-        };
-        admin.messaging().sendEachForMulticast(payload).then(e=>{
-            if(e){
-                res.send("ok")
-            }else{
-                res.send("Qualcosa è andato storto! Riprova")
-            }
-        }).catch((error) => {
-            console.error('Errore nell\'invio del messaggio push:', error);
-        });
+        if(info["token[]"]){
+            const payload = {
+                tokens:info["token[]"],
+                notification: {
+                    title:mittente,
+                    body:info.text,
+                    imageUrl:info.icon
+                },
+            };
+            admin.messaging().sendEachForMulticast(payload).then(e=>{
+                if(e){
+                    res.send("ok")
+                }else{
+                    res.send("Qualcosa è andato storto! Riprova")
+                }
+            }).catch((error) => {
+                console.error('Errore nell\'invio del messaggio push:', error);
+            });
+        }
+        
     }else{
         res.status(203).send("Non hai scritto niente. Scrivi il messaggio!")
     }
