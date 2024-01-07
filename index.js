@@ -76,7 +76,11 @@ app.put("/signup", async (req,res)=>{
     if(countError>0){
         res.status(203).send(error)
     }else{
-        info.token=[info.token]
+        if(info.token!==""){
+            info.token=[info.token]
+        }else{
+            delete info.token
+        }
         client.db("face").collection("users").findOne({email:info.email}).then(e=>{
             if(!e){
                 client.db("face").collection("users").insertOne(info).then(i=>{
@@ -110,8 +114,10 @@ app.put("/login", async (req,res)=>{
     }else{
         client.db("face").collection("users").findOne({password:info.password,email:info.email}).then(e=>{
             if(e){
-                if(!e.token.find(i=>info.token===i)){
-                    client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$push:{token:info.token}})
+                if(info.token!==""){
+                    if(!e.token.find(i=>info.token===i)){
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$push:{token:info.token}})
+                    }
                 }
                 res.send(e._id)
             }else{
