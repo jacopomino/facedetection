@@ -115,8 +115,10 @@ app.put("/login", async (req,res)=>{
         client.db("face").collection("users").findOne({password:info.password,email:info.email}).then(e=>{
             if(e){
                 if(info.token!==""){
-                    if(!e.token.find(i=>info.token===i)){
+                    if(e.token&&!e.token.find(i=>info.token===i)){
                         client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$push:{token:info.token}})
+                    }else if(!e.token){
+                        client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$set:{token:[info.token]}})
                     }
                 }
                 res.send(e._id)
