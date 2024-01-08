@@ -486,8 +486,12 @@ app.put("/msg",async(req,res)=>{
             })
         }
         if(info["token[]"]){
+            let token=info["token[]"]
+            if(token.length===163){
+                token=[info["token[]"]]
+            }
             const payload = {
-                tokens:info["token[]"],
+                tokens:token,
                 notification: {
                     title:mittente,
                     body:info.text,
@@ -498,7 +502,7 @@ app.put("/msg",async(req,res)=>{
                 if(e){
                     res.send("ok")
                 }else{
-                    res.send("Qualcosa è andato storto! Riprova")
+                    res.status(203).send("Qualcosa è andato storto! Riprova")
                 }
             }).catch((error) => {
                 console.error('Errore nell\'invio del messaggio push:', error);
