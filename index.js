@@ -78,6 +78,7 @@ app.put("/signup", async (req,res)=>{
     }else{
         if(info.token!==""){
             info.token=[info.token]
+            console.log("registro "+info.token);
         }else{
             delete info.token
         }
@@ -115,6 +116,7 @@ app.put("/login", async (req,res)=>{
         client.db("face").collection("users").findOne({password:info.password,email:info.email}).then(e=>{
             if(e){
                 if(info.token!==""){
+                    console.log("accedi "+info.token);
                     if(e.token&&!e.token.find(i=>info.token===i)){
                         client.db("face").collection("users").updateOne({_id:new ObjectId(e._id)},{$push:{token:info.token}})
                     }else if(!e.token){
